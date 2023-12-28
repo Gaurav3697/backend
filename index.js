@@ -3,19 +3,22 @@ import path from "path";
 
 const app = express();            //creating server
 
+//using middlewares
+app.use(express.static(path.join(path.resolve(),"public")));       //to use the public path to show static files like css file , script file etc
+app.use(express.urlencoded({extended: true}))
+
 app.get("/",(req,res)=>{
-    res.json({                  //sending json data
-        success:true,
-        "product":[],
-    })
+    res.render("index.ejs");
 })
 
-app.get("/getproducts",(req,res)=>{
-    const pathlocation = path.resolve();  //to get path in module but in common js you can get it by simply "__dirname"
-    res.sendFile(path.join(pathlocation,"./index.html"));   //to send static file ie.index.js
-
+app.get("/success",(req,res)=>{
+    res.render("success.ejs",{name:"Gaurav"});     //using ejs
 })
 
+app.post("/",(req,res)=>{
+    console.log(req.body);
+    res.redirect("/success")
+});
 
 app.listen(5000,()=>{          //listening the server
     console.log("server is working");
