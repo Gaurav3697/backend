@@ -2,7 +2,8 @@ import express from "express";
 import path from "path";
 import mongoose from "mongoose";
 import cookieParser from "cookie-parser";
-import jwt from "jsonwebtoken"
+import jwt from "jsonwebtoken";
+import bcrypt from "bcrypt";
 
 mongoose
   .connect("mongodb://127.0.0.1:27017", {
@@ -15,6 +16,7 @@ mongoose
 const userSchema = new mongoose.Schema({
   name: String,
   email: String,
+  password: String,
 });
 
 const User = mongoose.model("User", userSchema);
@@ -51,19 +53,29 @@ app.get("/logout", async (req, res) => {
   res.redirect("/");
 });
 
-app.get("/register",()=>{
-    res.render("register.ejs")
+app.get("/register",(req,res)=>{
+    res.render("register.ejs");
+})
+
+app.get("/login",(req,res)=>{
+    res.render("login.ejs")
 })
 
 app.post("/login", async(req, res) => {
-    const {name,email} = req.body;
+    const {email,password} = req.body;
 
     let user = await User.findOne({email});
 
-    user = await User.create({
-        name,
-        email,
-    });
+    if(!user){
+      return res.redirect("/register");
+    }
+
+   const isMatch = await bcrypt.compare(password,user.password);
+
+    if (!isMatch){
+      return res.render("login.ejs",{message:"Incorrect password"});
+    }
+
     const token = jwt.sign({_id: user._id},"asdjfsllkljllkjksaf")
   res.cookie("token", token, {
     httpOnly: true,
@@ -71,6 +83,29 @@ app.post("/login", async(req, res) => {
   });
   res.redirect("/");
 });
+
+app.post("/register",async(req,res)=>{
+  const {name,email,password} = req.body;
+
+  let user = await User.findOne({email});
+  if(user){
+    return res.redirect("/login");
+  }
+  const hashedPassword = await bcrypt.hash(password,10)
+  user = await User.create({
+    name,
+    email,
+    password:hashedPassword,
+});
+
+const token = jwt.sign({_id: user._id},"asdjfsllkljllkjksaf")
+res.cookie("token", token, {
+  httpOnly: true,
+  expires: new Date(Date.now() + 60 * 1000),
+});
+res.redirect("/");
+
+})
 
 app.listen(5000, () => {
   //listening the server
